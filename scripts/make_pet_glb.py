@@ -4,7 +4,7 @@
 구/호(arc) 프리미티브를 조합한 캐릭터와 노드 TRS 애니메이션 클립
 (Idle / Hello / Play / Laugh)을 하나의 .glb 로 굽는다.
 
-    python3 scripts/make_pet_glb.py            # -> assets/pet.glb
+    python3 scripts/make_pet_glb.py            # -> public/assets/pet.glb
     python3 scripts/make_pet_glb.py out.glb
 """
 import json
@@ -506,7 +506,7 @@ def build_glb():
 
 
 if __name__ == "__main__":
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "assets" / "pet.glb"
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent / "public" / "assets" / "pet.glb"
     out.parent.mkdir(parents=True, exist_ok=True)
     glb = build_glb()
     out.write_bytes(glb)
