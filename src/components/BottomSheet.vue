@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 // 손으로 끌어올리는 바텀시트.
 // 접힘: header 슬롯만 보인다 / 펼침: 위쪽 topGap 만 남기고 올라온다.
-// 헤더를 끌거나 탭해서 여닫고, 펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
+// 헤더를 조금이라도 끌어올리면 펼쳐지고, 탭해서도 여닫는다. 펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
 const props = defineProps({
   topGap: { type: Number, default: 56 },
   label: { type: String, default: '바텀시트' },
@@ -43,13 +43,15 @@ function dragTo(raw, t) {
   samples = samples.filter((s) => t - s.t < 100)
 }
 
-function release(t) {
+function release(t, fromY) {
   dragging.value = false
   // 놓기 직전 100ms 동안의 움직임으로 속도를 잰다 (끌다가 멈춘 뒤 놓으면 0)
   const recent = samples.filter((s) => t - s.t < 100)
   const a = recent[0], b = recent[recent.length - 1]
   const v = a && b && b.t > a.t ? (b.y - a.y) / (b.t - a.t) : 0   // + 는 아래 방향
-  const close = Math.abs(v) > FLICK ? v > 0 : y.value > maxY.value / 2
+  // 시작 위치보다 조금이라도 위로 끌었으면 무조건 펼친다.
+  // 아래로 끈 경우에만 속도(플릭)·절반 위치로 닫을지 정한다.
+  const close = y.value < fromY ? false : Math.abs(v) > FLICK ? v > 0 : y.value > maxY.value / 2
   open.value = !close
   y.value = close ? maxY.value : 0
 }
@@ -75,17 +77,17 @@ function onPointerMove(e) {
 
 function onPointerUp(e) {
   if (!start) return
-  const moved = start.moved
+  const { moved, y: fromY } = start
   start = null
-  if (moved) release(e.timeStamp)
+  if (moved) release(e.timeStamp, fromY)
   else open.value = !open.value   // 탭하면 토글
 }
 
 function onPointerCancel(e) {
   if (!start) return
-  const moved = start.moved
+  const { moved, y: fromY } = start
   start = null
-  if (moved) release(e.timeStamp)
+  if (moved) release(e.timeStamp, fromY)
 }
 
 // ── 본문: 맨 위에서 아래로 당기면 시트를 끌어내린다 (그 외에는 기본 스크롤) ──
@@ -111,7 +113,7 @@ function onTouchMove(e) {
 }
 
 function onTouchEnd(e) {
-  if (touch?.active) release(e.timeStamp)
+  if (touch?.active) release(e.timeStamp, touch.y)
   touch = null
 }
 
