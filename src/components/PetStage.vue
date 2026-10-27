@@ -10,6 +10,8 @@ const props = defineProps({
   verticalRotate: { type: Boolean, default: false },   // 위아래 회전 허용
   zoom: { type: Boolean, default: false },             // 휠·핀치 줌 허용
 })
+// 사용자가 직접 반응시킨 경우(버튼·펫 터치)에만 알린다. 첫 자동 인사는 제외.
+const emit = defineEmits(['react'])
 
 // ── 설정 ─────────────────────────────────────────────────────────────────────
 // 클립 이름은 아래 정규식으로 찾고, 못 찾은 액션은 간단한 절차적 모션(점프/흔들기)으로 대체된다.
@@ -156,7 +158,7 @@ function loadModel() {
     toIdle(0)
 
     ready.value = true
-    greetTimer = setTimeout(() => react('hello'), 500)
+    greetTimer = setTimeout(() => react('hello', false), 500)
   }, undefined, (err) => {
     console.error(err)
     loadError.value = true
@@ -175,10 +177,11 @@ function toIdle(fade = 0.35) {
   else if (current) { current.fadeOut(fade); current = null }
 }
 
-function react(key) {
+function react(key, byUser = true) {
   if (!ready.value) return
   const r = REACTIONS[key]
   activeKey.value = key
+  if (byUser) emit('react', key)
 
   if (actions[key]) {
     flip[key] ^= 1
@@ -462,7 +465,7 @@ onBeforeUnmount(() => {
   font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.6; pointer-events: none; z-index: 1; }
 
 /* ── 액션 버튼 ── */
-.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 18px calc(22px + env(safe-area-inset-bottom)); position: relative; z-index: 3; }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px 18px 14px; position: relative; z-index: 3; }
 .actions button {
   appearance: none; border: 0; cursor: pointer; font: inherit; color: var(--ink);
   display: flex; flex-direction: column; align-items: center; gap: 6px;
