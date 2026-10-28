@@ -10,6 +10,10 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // 끌어올리면 펼쳐지고, 끌어내리면 절반 이상 내리거나 빠르게 튕겨야 닫힌다.
 // 본문(bodyToggle=true 일 때): 접힌 상태에서 보이는 본문 부분도 끌어서 열 수 있고,
 //                            펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
+// 컴포넌트에 준 class·style·id 같은 속성은 시트(.sheet)에 붙인다.
+// (여러 요소로 된 컴포넌트라 자동으로는 붙지 않으므로 직접 지정) 예: class="my-sheet" / :class="['a', { b: isB }]"
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps({
   // 접힌 상태로 보이는 높이(px). 지정하면 헤더 높이와 상관없이 항상 이 값이 기준이 된다.
   peek: { type: Number, default: null },
@@ -179,6 +183,7 @@ onBeforeUnmount(() => {
   <section
     ref="sheetEl"
     class="sheet"
+    v-bind="$attrs"
     :class="{ open, dragging, measured, 'body-toggle': bodyToggle }"
     :style="sheetStyle"
     :aria-label="label"
