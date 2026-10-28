@@ -6,8 +6,9 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 //       header 슬롯은 넣어도 되고 안 넣어도 된다(없으면 손잡이만).
 // 펼침: 기본은 내용 높이만큼만 올라온다. height 로 높이를 직접 정할 수 있고,
 //       어느 경우든 화면 위쪽 topGap 은 남긴다(넘치는 내용은 본문 안에서 스크롤).
-// 헤더는 항상 끌거나 탭해서 여닫을 수 있다. 조금이라도 끌어올리면 펼쳐진다.
-// 본문(bodyToggle=true 일 때): 접힌 상태에서 보이는 본문 부분도 끌거나 탭해서 열 수 있고,
+// 헤더는 항상 끌어서 여닫는다. 10px 이상 움직여야 동작하고, 클릭(탭)만으로는 여닫지 않는다.
+// 끌어올리면 펼쳐지고, 끌어내리면 절반 이상 내리거나 빠르게 튕겨야 닫힌다.
+// 본문(bodyToggle=true 일 때): 접힌 상태에서 보이는 본문 부분도 끌어서 열 수 있고,
 //                            펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
 const props = defineProps({
   // 접힌 상태로 보이는 높이(px). 지정하면 헤더 높이와 상관없이 항상 이 값이 기준이 된다.
@@ -36,7 +37,7 @@ const sheetStyle = computed(() => ({
   transform: `translateY(${y.value}px)`,
 }))
 
-const DRAG_START = 6         // 이만큼 움직여야 드래그로 본다(px)
+const DRAG_START = 10        // 이만큼 움직여야 드래그로 보고 여닫는다(px). 그보다 적게 움직이면 아무 일도 없다
 const FLICK = 0.35           // 이 속도(px/ms) 이상으로 놓으면 방향대로 여닫는다
 let safeBottom = 0, resizeObserver, start = null, touch = null, samples = []
 
@@ -99,8 +100,7 @@ function onPointerUp(e) {
   if (!start) return
   const { moved, y: fromY } = start
   start = null
-  if (moved) release(e.timeStamp, fromY)
-  else open.value = !open.value   // 탭하면 토글
+  if (moved) release(e.timeStamp, fromY)   // 클릭(탭)처럼 거의 안 움직였으면 여닫지 않는다
 }
 
 function onPointerCancel(e) {
