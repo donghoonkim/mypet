@@ -14,7 +14,7 @@ const readType = () => (new URLSearchParams(location.search).get('type') === '1'
 const type = ref(readType())
 const current = computed(() => TYPES.find((t) => t.id === type.value))
 const playCount = ref(0)     // 펫과 놀아준 횟수 → 바텀시트 미션 진행도
-const sheetPeek = ref(0)     // 바텀시트가 접혀서 보이는 높이 → 그만큼 화면 아래를 비운다
+const sheetPeek = ref(0)     // 바텀시트가 접혀 있을 때 보이는 높이(.sheet-header + 하단 안전영역) → 그만큼 화면 아래를 비운다
 
 function selectType(id) {
   if (id === type.value) return

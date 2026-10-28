@@ -2,10 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 // 손으로 끌어올리는 바텀시트.
-// 접힘: header 슬롯만 보인다 / 펼침: 위쪽 topGap 만 남기고 올라온다.
+// 접힘: header 슬롯만 보인다 (= .sheet-header 높이 + 하단 안전영역).
+// 펼침: 기본은 내용 높이만큼만 올라온다. height 로 높이를 직접 정할 수 있고,
+//       어느 경우든 화면 위쪽 topGap 은 남긴다(넘치는 내용은 본문 안에서 스크롤).
 // 헤더를 조금이라도 끌어올리면 펼쳐지고, 탭해서도 여닫는다. 펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
 const props = defineProps({
-  topGap: { type: Number, default: 56 },
+  // 펼친 높이. null = 내용 높이에 맞춤, 숫자 = px, 문자열 = CSS 값('60%', '420px', '50dvh' 등)
+  height: { type: [Number, String], default: null },
+  topGap: { type: Number, default: 56 },   // 펼쳤을 때 위쪽에 최소한 남길 여백(px)
   label: { type: String, default: '바텀시트' },
 })
 const open = defineModel('open', { type: Boolean, default: false })
@@ -19,11 +23,17 @@ const maxY = ref(0)
 const dragging = ref(false)
 const measured = ref(false) // 첫 측정 전에는 트랜지션 없이 바로 자리 잡는다
 const progress = computed(() => (maxY.value ? 1 - Math.min(Math.max(y.value / maxY.value, 0), 1) : 0))
+const sheetStyle = computed(() => ({
+  height: typeof props.height === 'number' ? props.height + 'px' : props.height ?? undefined,
+  maxHeight: `calc(100% - ${props.topGap}px)`,
+  transform: `translateY(${y.value}px)`,
+}))
 
 const DRAG_START = 6         // 이만큼 움직여야 드래그로 본다(px)
 const FLICK = 0.35           // 이 속도(px/ms) 이상으로 놓으면 방향대로 여닫는다
 let safeBottom = 0, resizeObserver, start = null, touch = null, samples = []
 
+// 접힌 높이(peek) = 헤더 높이 + 하단 안전영역, 접힐 때 내려가는 거리(maxY) = 시트 높이 - peek
 function measure() {
   const peek = headerEl.value.offsetHeight + safeBottom
   maxY.value = Math.max(sheetEl.value.offsetHeight - peek, 0)
@@ -153,7 +163,7 @@ onBeforeUnmount(() => {
     ref="sheetEl"
     class="sheet"
     :class="{ dragging, measured }"
-    :style="{ top: topGap + 'px', transform: `translateY(${y}px)` }"
+    :style="sheetStyle"
     :aria-label="label"
   >
     <div
@@ -219,7 +229,7 @@ onBeforeUnmount(() => {
 .handle { display: block; width: 40px; height: 5px; margin: 0 auto 12px; border-radius: 3px; background: #d6e2dc; }
 
 .sheet-body {
-  flex: 1; min-height: 0; overflow-y: auto;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;   /* 내용만큼 크고, 시트가 최대 높이에 닿으면 줄어들며 스크롤 */
   overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch;
   padding: 0 20px calc(28px + env(safe-area-inset-bottom));
 }
