@@ -6,7 +6,6 @@ import BottomSheet from './BottomSheet.vue'
 const props = defineProps({
   playCount: { type: Number, default: 0 },   // 사용자가 펫과 놀아준 횟수 (PetStage 의 react 이벤트)
 })
-const emit = defineEmits(['peek'])
 
 const open = ref(false)
 const LEVEL_EXP = 300
@@ -82,7 +81,7 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
 </script>
 
 <template>
-  <BottomSheet v-model:open="open" label="몽이 미션" @peek="emit('peek', $event)">
+  <BottomSheet v-model:open="open" label="몽이 미션">
     <template #header>
       <div class="peek">
         <div class="avatar" aria-hidden="true">🐻</div>

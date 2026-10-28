@@ -14,7 +14,6 @@ const readType = () => (new URLSearchParams(location.search).get('type') === '1'
 const type = ref(readType())
 const current = computed(() => TYPES.find((t) => t.id === type.value))
 const playCount = ref(0)     // 펫과 놀아준 횟수 → 바텀시트 미션 진행도
-const sheetPeek = ref(0)     // 바텀시트가 접혀 있을 때 보이는 높이(.sheet-header + 하단 안전영역) → 그만큼 화면 아래를 비운다
 
 function selectType(id) {
   if (id === type.value) return
@@ -37,7 +36,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <main class="app" :style="{ '--sheet-peek': sheetPeek + 'px' }">
+  <main class="app">
     <nav class="types" aria-label="타입 선택">
       <a
         v-for="t in TYPES"
@@ -51,7 +50,7 @@ watchEffect(() => {
     <!-- key 로 타입이 바뀔 때마다 3D 씬을 새로 만든다 -->
     <PetStage :key="type" :vertical-rotate="current.verticalRotate" :zoom="current.zoom" @react="playCount++" />
 
-    <PetMissionSheet :play-count="playCount" @peek="sheetPeek = $event" />
+    <PetMissionSheet :play-count="playCount" />
   </main>
 </template>
 
@@ -65,7 +64,6 @@ watchEffect(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-bottom: var(--sheet-peek, 0px);
   background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 62%, #fff 100%);
 }
 @media (min-width: 520px) and (min-height: 700px) {

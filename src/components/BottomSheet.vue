@@ -13,11 +13,11 @@ const props = defineProps({
   label: { type: String, default: '바텀시트' },
 })
 const open = defineModel('open', { type: Boolean, default: false })
-const emit = defineEmits(['peek'])   // 접힌 상태로 보이는 높이(px). 부모가 그만큼 아래 여백을 둔다.
 
 const sheetEl = ref(null)
 const headerEl = ref(null)
 const bodyEl = ref(null)
+const peek = ref(0)         // 접힌 상태로 보이는 높이. 같은 높이의 빈 공간(spacer)을 둬서 시트 뒤 내용이 가려지지 않게 한다
 const y = ref(0)            // 펼친 위치에서 아래로 내려간 거리. 0 = 펼침, maxY = 접힘
 const maxY = ref(0)
 const dragging = ref(false)
@@ -35,9 +35,8 @@ let safeBottom = 0, resizeObserver, start = null, touch = null, samples = []
 
 // 접힌 높이(peek) = 헤더 높이 + 하단 안전영역, 접힐 때 내려가는 거리(maxY) = 시트 높이 - peek
 function measure() {
-  const peek = headerEl.value.offsetHeight + safeBottom
-  maxY.value = Math.max(sheetEl.value.offsetHeight - peek, 0)
-  emit('peek', peek)
+  peek.value = headerEl.value.offsetHeight + safeBottom
+  maxY.value = Math.max(sheetEl.value.offsetHeight - peek.value, 0)
   if (!dragging.value) y.value = open.value ? 0 : maxY.value
 }
 
@@ -151,6 +150,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <!-- 접힌 시트 높이만큼 자리를 차지해서, 부모 레이아웃의 내용이 시트 뒤로 가려지지 않게 한다 -->
+  <div class="sheet-spacer" aria-hidden="true" :style="{ height: peek + 'px' }"></div>
+
   <div
     class="sheet-backdrop"
     :class="{ on: open, dragging, measured }"
@@ -198,6 +200,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.sheet-spacer { flex: none; }
+
 .sheet-backdrop {
   position: absolute; inset: 0; z-index: 10;
   background: rgba(16, 32, 24, .42);
