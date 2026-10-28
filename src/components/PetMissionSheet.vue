@@ -4,7 +4,7 @@ import BottomSheet from './BottomSheet.vue'
 import { useBodyLock } from '../composables/useBodyLock'
 
 // 펫 키우기 하단 시트 (샘플 데이터). 실제 서비스에서는 API 응답으로 바꾸면 된다.
-// BottomSheet 의 옵션(peek, height, topGap, bodyToggle)은 이 컴포넌트에 그대로 주면 전달된다.
+// BottomSheet 의 옵션(peek, height, maxWidth, topGap, bodyToggle)은 이 컴포넌트에 그대로 주면 전달된다.
 // 예: <PetMissionSheet :peek="160" :body-toggle="false" />
 const props = defineProps({
   playCount: { type: Number, default: 0 },   // 사용자가 펫과 놀아준 횟수 (PetStage 의 react 이벤트)

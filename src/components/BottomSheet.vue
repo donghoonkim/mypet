@@ -16,6 +16,8 @@ const props = defineProps({
   // 펼친 높이. null = 내용 높이에 맞춤, 숫자 = px, 문자열 = CSS 값('60%', '420px', '50dvh' 등)
   height: { type: [Number, String], default: null },
   topGap: { type: Number, default: 56 },   // 펼쳤을 때 위쪽에 최소한 남길 여백(px)
+  // 시트 최대 너비. 화면이 더 넓으면 이 너비로 하단 가운데에 놓인다. 숫자 = px, 문자열 = CSS 값
+  maxWidth: { type: [Number, String], default: 580 },
   label: { type: String, default: '바텀시트' },
   // 본문 영역으로도 여닫을지. false 면 본문에서는 열기·닫기가 동작하지 않고 헤더로만 여닫는다.
   bodyToggle: { type: Boolean, default: true },
@@ -34,6 +36,7 @@ const progress = computed(() => (maxY.value ? 1 - Math.min(Math.max(y.value / ma
 const sheetStyle = computed(() => ({
   height: typeof props.height === 'number' ? props.height + 'px' : props.height ?? undefined,
   maxHeight: `calc(100% - ${props.topGap}px)`,
+  maxWidth: typeof props.maxWidth === 'number' ? props.maxWidth + 'px' : props.maxWidth,
   transform: `translateY(${y.value}px)`,
 }))
 
@@ -223,6 +226,7 @@ onBeforeUnmount(() => {
 
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 11;
+  margin: 0 auto;   /* maxWidth 보다 넓은 화면에서는 하단 가운데 정렬 */
   display: flex; flex-direction: column;
   background: #fff; border-radius: 24px 24px 0 0;
   box-shadow: 0 -10px 30px rgba(22, 80, 50, .14);
