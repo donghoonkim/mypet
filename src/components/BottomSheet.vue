@@ -6,8 +6,9 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 //       header 슬롯은 넣어도 되고 안 넣어도 된다(없으면 손잡이만).
 // 펼침: 기본은 내용 높이만큼만 올라온다. height 로 높이를 직접 정할 수 있고,
 //       어느 경우든 화면 위쪽 topGap 은 남긴다(넘치는 내용은 본문 안에서 스크롤).
-// 접힌 상태에서는 보이는 부분 어디든, 펼친 상태에서는 헤더를 끌거나 탭해서 여닫는다.
-// 조금이라도 끌어올리면 펼쳐지고, 펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
+// 헤더는 항상 끌거나 탭해서 여닫을 수 있다. 조금이라도 끌어올리면 펼쳐진다.
+// 본문(bodyToggle=true 일 때): 접힌 상태에서 보이는 본문 부분도 끌거나 탭해서 열 수 있고,
+//                            펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
 const props = defineProps({
   // 접힌 상태로 보이는 높이(px). 지정하면 헤더 높이와 상관없이 항상 이 값이 기준이 된다.
   peek: { type: Number, default: null },
@@ -15,6 +16,8 @@ const props = defineProps({
   height: { type: [Number, String], default: null },
   topGap: { type: Number, default: 56 },   // 펼쳤을 때 위쪽에 최소한 남길 여백(px)
   label: { type: String, default: '바텀시트' },
+  // 본문 영역으로도 여닫을지. false 면 본문에서는 열기·닫기가 동작하지 않고 헤더로만 여닫는다.
+  bodyToggle: { type: Boolean, default: true },
 })
 const open = defineModel('open', { type: Boolean, default: false })
 
@@ -71,10 +74,11 @@ function release(t, fromY) {
 }
 
 // ── 포인터 드래그 (마우스·터치 공통) ──
-// 접힌 상태: 보이는 부분 어디서든 / 펼친 상태: 헤더에서만 (본문은 버튼·스크롤에 양보)
+// 헤더: 항상 / 본문: 접힌 상태이고 bodyToggle 일 때만 (펼친 상태의 본문은 버튼·스크롤에 양보)
 function onPointerDown(e) {
   if (e.pointerType === 'mouse' && e.button !== 0) return
-  if (open.value && !headerEl.value.contains(e.target)) return
+  const onHeader = headerEl.value.contains(e.target)
+  if (!onHeader && (open.value || !props.bodyToggle)) return
   start = { py: e.clientY, y: y.value, moved: false }
   samples = [{ t: e.timeStamp, y: y.value }]
   e.currentTarget.setPointerCapture(e.pointerId)
@@ -108,7 +112,7 @@ function onPointerCancel(e) {
 
 // ── 본문: 맨 위에서 아래로 당기면 시트를 끌어내린다 (그 외에는 기본 스크롤) ──
 function onTouchStart(e) {
-  if (!open.value || e.touches.length > 1) return
+  if (!props.bodyToggle || !open.value || e.touches.length > 1) return
   touch = { py: e.touches[0].clientY, y: y.value, active: null }
   samples = [{ t: e.timeStamp, y: y.value }]
 }
@@ -171,7 +175,7 @@ onBeforeUnmount(() => {
   <section
     ref="sheetEl"
     class="sheet"
-    :class="{ open, dragging, measured }"
+    :class="{ open, dragging, measured, 'body-toggle': bodyToggle }"
     :style="sheetStyle"
     :aria-label="label"
     @pointerdown="onPointerDown"
@@ -237,8 +241,9 @@ onBeforeUnmount(() => {
   -webkit-tap-highlight-color: transparent;
 }
 .sheet.dragging .sheet-header { cursor: grabbing; }
-/* 접힌 상태에서는 보이는 부분 전체가 손잡이 역할 */
-.sheet:not(.open) { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+/* 접힌 상태: 브라우저 제스처를 막고, bodyToggle 이면 보이는 부분 전체가 손잡이 역할 */
+.sheet:not(.open) { touch-action: none; user-select: none; -webkit-user-select: none; }
+.sheet.body-toggle:not(.open) { cursor: grab; }
 .sheet.dragging { cursor: grabbing; }
 /* header 슬롯이 없으면 손잡이만 */
 .sheet-header.bare { padding-bottom: 10px; }
