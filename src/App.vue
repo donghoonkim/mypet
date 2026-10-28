@@ -29,7 +29,6 @@ onBeforeUnmount(() => window.removeEventListener('popstate', onPopState))
 
 watchEffect(() => {
   const lock = !current.value.zoom
-  document.documentElement.classList.toggle('lock-page', lock)
   document.querySelector('meta[name="viewport"]').content = VIEWPORT + (lock ? ', maximum-scale=1, user-scalable=no' : '')
   document.title = `몽이랑 놀기 · Type ${type.value}`
 })

@@ -1,11 +1,15 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 import BottomSheet from './BottomSheet.vue'
+import { useBodyLock } from '../composables/useBodyLock'
 
 // 펫 키우기 하단 시트 (샘플 데이터). 실제 서비스에서는 API 응답으로 바꾸면 된다.
 const props = defineProps({
   playCount: { type: Number, default: 0 },   // 사용자가 펫과 놀아준 횟수 (PetStage 의 react 이벤트)
 })
+
+// 이 시트가 화면에 있는 동안 페이지 자체의 스크롤·핀치 줌·바운스를 막는다 (body 에 인라인 스타일, 언마운트 시 복원)
+useBodyLock()
 
 const open = ref(false)
 const LEVEL_EXP = 300

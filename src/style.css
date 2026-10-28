@@ -20,5 +20,3 @@ body {
 }
 #app { height: 100%; display: grid; place-items: center; }
 
-/* TYPE 2: 페이지 자체의 스크롤·핀치 줌·바운스를 모두 막는다 */
-html.lock-page, html.lock-page body { position: fixed; inset: 0; overflow: hidden; touch-action: none; }
