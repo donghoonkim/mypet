@@ -19,7 +19,8 @@ const props = defineProps({
   // 시트 최대 너비. 화면이 더 넓으면 이 너비로 하단 가운데에 놓인다. 숫자 = px, 문자열 = CSS 값
   maxWidth: { type: [Number, String], default: 580 },
   label: { type: String, default: '바텀시트' },
-  // 본문 영역으로도 여닫을지. false 면 본문에서는 열기·닫기가 동작하지 않고 헤더로만 여닫는다.
+  // 본문 영역으로도 여닫을지. false 면 본문에서는 열기·닫기만 동작하지 않고 헤더로만 여닫는다.
+  // (본문의 버튼·스크롤 같은 내용 이벤트는 접힌 상태에서도 그대로 동작)
   bodyToggle: { type: Boolean, default: true },
 })
 const open = defineModel('open', { type: Boolean, default: false })
@@ -203,7 +204,7 @@ onBeforeUnmount(() => {
     <div
       ref="bodyEl"
       class="sheet-body"
-      :inert="!open"
+      :inert="!open && bodyToggle"
       @touchstart="onTouchStart"
       @touchmove="onTouchMove"
       @touchend="onTouchEnd"
@@ -245,9 +246,9 @@ onBeforeUnmount(() => {
   -webkit-tap-highlight-color: transparent;
 }
 .sheet.dragging .sheet-header { cursor: grabbing; }
-/* 접힌 상태: 브라우저 제스처를 막고, bodyToggle 이면 보이는 부분 전체가 손잡이 역할 */
-.sheet:not(.open) { touch-action: none; user-select: none; -webkit-user-select: none; }
-.sheet.body-toggle:not(.open) { cursor: grab; }
+/* 접힌 상태 + bodyToggle: 보이는 부분 전체가 손잡이 역할 (본문 내용은 잠그고 브라우저 제스처도 막는다)
+   bodyToggle=false 면 본문은 여닫기에만 쓰이지 않을 뿐, 버튼·스크롤 등은 접힌 상태에서도 그대로 동작한다 */
+.sheet.body-toggle:not(.open) { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .sheet.dragging { cursor: grabbing; }
 /* header 슬롯이 없으면 손잡이만 */
 .sheet-header.bare { padding-bottom: 10px; }
