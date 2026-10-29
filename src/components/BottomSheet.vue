@@ -7,7 +7,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // 펼침: 기본은 내용 높이만큼만 올라온다. height 로 높이를 직접 정할 수 있고,
 //       어느 경우든 화면 위쪽 topGap 은 남긴다(넘치는 내용은 본문 안에서 스크롤).
 // 헤더는 항상 끌어서 여닫는다. 10px 이상 움직여야 동작하고, 클릭(탭)만으로는 여닫지 않는다.
-// 끌어올리면 펼쳐지고, 끌어내리면 절반 이상 내리거나 빠르게 튕겨야 닫힌다.
+// 끌어올리면 펼쳐지고, 끌어내리면 닫힌다(방향만 본다. 얼마나 멀리·빠르게 끌었는지는 상관없음).
 // 본문(bodyToggle=true 일 때): 접힌 상태에서 보이는 본문 부분도 끌어서 열 수 있고,
 //                            펼친 상태에서는 본문을 맨 위까지 올린 뒤 아래로 당겨도 닫힌다.
 // 컴포넌트에 준 class·style·id 같은 속성은 시트(.sheet)에 붙인다.
@@ -46,8 +46,7 @@ const sheetStyle = computed(() => ({
 }))
 
 const DRAG_START = 10        // 이만큼 움직여야 드래그로 보고 여닫는다(px). 그보다 적게 움직이면 아무 일도 없다
-const FLICK = 0.35           // 이 속도(px/ms) 이상으로 놓으면 방향대로 여닫는다
-let safeBottom = 0, resizeObserver, start = null, touch = null, samples = []
+let safeBottom = 0, resizeObserver, start = null, touch = null
 
 // 접힌 높이 = peek 값(있으면) 또는 헤더 높이 + 하단 안전영역, 접힐 때 내려가는 거리(maxY) = 시트 높이 - 접힌 높이
 function measure() {
@@ -57,29 +56,26 @@ function measure() {
 }
 
 watch(open, (v) => { if (!dragging.value) y.value = v ? 0 : maxY.value })
+
+// 다 닫히고 나면 본문 스크롤을 맨 위로 돌려 둔다 (접힌 상태에서는 항상 내용의 처음이 보이게)
+function onTransitionEnd(e) {
+  if (e.target === sheetEl.value && e.propertyName === 'transform' && !open.value) bodyEl.value.scrollTop = 0
+}
 watch(() => props.peek, () => measure())
 
 // 범위를 넘겨 끌면 고무줄처럼 조금만 따라온다
 const rubber = (d) => 60 * (1 - Math.exp(-d / 120))
 
-function dragTo(raw, t) {
+function dragTo(raw) {
   const m = maxY.value
   y.value = raw < 0 ? -rubber(-raw) : raw > m ? m + rubber(raw - m) : raw
-  samples.push({ t, y: y.value })
-  samples = samples.filter((s) => t - s.t < 100)
 }
 
-function release(t, fromY) {
+// 놓았을 때 시작 위치보다 위면 펼치고, 아래면 닫는다. (같으면 원래 상태 유지)
+function release(fromY) {
   dragging.value = false
-  // 놓기 직전 100ms 동안의 움직임으로 속도를 잰다 (끌다가 멈춘 뒤 놓으면 0)
-  const recent = samples.filter((s) => t - s.t < 100)
-  const a = recent[0], b = recent[recent.length - 1]
-  const v = a && b && b.t > a.t ? (b.y - a.y) / (b.t - a.t) : 0   // + 는 아래 방향
-  // 시작 위치보다 조금이라도 위로 끌었으면 무조건 펼친다.
-  // 아래로 끈 경우에만 속도(플릭)·절반 위치로 닫을지 정한다.
-  const close = y.value < fromY ? false : Math.abs(v) > FLICK ? v > 0 : y.value > maxY.value / 2
-  open.value = !close
-  y.value = close ? maxY.value : 0
+  if (y.value !== fromY) open.value = y.value < fromY
+  y.value = open.value ? 0 : maxY.value
 }
 
 // ── 포인터 드래그 (마우스·터치 공통) ──
@@ -89,7 +85,6 @@ function onPointerDown(e) {
   const onHeader = headerEl.value.contains(e.target)
   if (!onHeader && (open.value || !props.bodyToggle)) return
   start = { py: e.clientY, y: y.value, moved: false }
-  samples = [{ t: e.timeStamp, y: y.value }]
   e.currentTarget.setPointerCapture(e.pointerId)
 }
 
@@ -101,28 +96,27 @@ function onPointerMove(e) {
     start.moved = true
     dragging.value = true
   }
-  dragTo(start.y + dy, e.timeStamp)
+  dragTo(start.y + dy)
 }
 
 function onPointerUp(e) {
   if (!start) return
   const { moved, y: fromY } = start
   start = null
-  if (moved) release(e.timeStamp, fromY)   // 클릭(탭)처럼 거의 안 움직였으면 여닫지 않는다
+  if (moved) release(fromY)   // 클릭(탭)처럼 거의 안 움직였으면 여닫지 않는다
 }
 
 function onPointerCancel(e) {
   if (!start) return
   const { moved, y: fromY } = start
   start = null
-  if (moved) release(e.timeStamp, fromY)
+  if (moved) release(fromY)
 }
 
 // ── 본문: 맨 위에서 아래로 당기면 시트를 끌어내린다 (그 외에는 기본 스크롤) ──
 function onTouchStart(e) {
   if (!props.bodyToggle || !open.value || e.touches.length > 1) return
   touch = { py: e.touches[0].clientY, y: y.value, active: null }
-  samples = [{ t: e.timeStamp, y: y.value }]
 }
 
 function onTouchMove(e) {
@@ -137,11 +131,11 @@ function onTouchMove(e) {
   }
   if (!touch.active) return
   e.preventDefault()
-  dragTo(touch.y + dy, e.timeStamp)
+  dragTo(touch.y + dy)
 }
 
 function onTouchEnd(e) {
-  if (touch?.active) release(e.timeStamp, touch.y)
+  if (touch?.active) release(touch.y)
   touch = null
 }
 
@@ -191,6 +185,7 @@ onBeforeUnmount(() => {
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
     @pointercancel="onPointerCancel"
+    @transitionend="onTransitionEnd"
   >
     <div
       ref="headerEl"
@@ -266,4 +261,6 @@ onBeforeUnmount(() => {
   overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch;
   padding: 0 20px calc(28px + env(safe-area-inset-bottom));
 }
+/* 접힌 상태에서는 본문을 스크롤하지 않는다. 버튼 등 내용 이벤트는 그대로 동작하고, 펼치면 다시 스크롤된다 */
+.sheet:not(.open) .sheet-body { overflow-y: hidden; }
 </style>
