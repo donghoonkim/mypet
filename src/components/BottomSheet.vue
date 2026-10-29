@@ -55,11 +55,35 @@ function measure() {
   if (!dragging.value) y.value = open.value ? 0 : maxY.value
 }
 
-watch(open, (v) => { if (!dragging.value) y.value = v ? 0 : maxY.value })
+watch(open, (v) => {
+  if (!dragging.value) y.value = v ? 0 : maxY.value
+  if (v) cancelAnimationFrame(scrollAnim)
+  else scrollBodyToTop()
+})
 
-// 다 닫히고 나면 본문 스크롤을 맨 위로 돌려 둔다 (접힌 상태에서는 항상 내용의 처음이 보이게)
+// 닫힐 때 본문 스크롤을 시트가 내려가는 동안 함께 부드럽게 맨 위로 올린다
+// (접힌 상태에서는 항상 내용의 처음이 보이게). 시간·가속은 .sheet 트랜지션(.38s, ease-out)에 맞춘다.
+const CLOSE_MS = 380
+let scrollAnim = 0
+function scrollBodyToTop() {
+  cancelAnimationFrame(scrollAnim)
+  const el = bodyEl.value, from = el.scrollTop
+  if (!from) return
+  const t0 = performance.now()
+  const step = (now) => {
+    const k = Math.min((now - t0) / CLOSE_MS, 1)
+    el.scrollTop = from * Math.pow(1 - k, 3)
+    if (k < 1) scrollAnim = requestAnimationFrame(step)
+  }
+  scrollAnim = requestAnimationFrame(step)
+}
+
+// 혹시 다 닫힌 뒤에도 스크롤이 남아 있으면 맨 위로 맞춘다 (안전장치)
 function onTransitionEnd(e) {
-  if (e.target === sheetEl.value && e.propertyName === 'transform' && !open.value) bodyEl.value.scrollTop = 0
+  if (e.target === sheetEl.value && e.propertyName === 'transform' && !open.value && bodyEl.value.scrollTop) {
+    cancelAnimationFrame(scrollAnim)
+    bodyEl.value.scrollTop = 0
+  }
 }
 watch(() => props.peek, () => measure())
 
@@ -157,6 +181,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  cancelAnimationFrame(scrollAnim)
   resizeObserver.disconnect()
   window.removeEventListener('keydown', onKeyDown)
 })
