@@ -10,7 +10,8 @@ const props = defineProps({
   playCount: { type: Number, default: 0 },   // 사용자가 펫과 놀아준 횟수 (PetStage 의 react 이벤트)
 })
 
-// 이 시트가 화면에 있는 동안 페이지 자체의 스크롤·핀치 줌·바운스를 막는다 (body 에 인라인 스타일, 언마운트 시 복원)
+// 이 시트가 화면에 있는 동안 페이지 자체의 스크롤·핀치 줌·바운스를 막는다 (언마운트·KeepAlive 비활성 시 해제)
+// 팝업이 열려 있는 동안 풀려면: useBodyLock(() => !popupOpen.value)  /  직접 제어: const { lock, unlock } = useBodyLock()
 useBodyLock()
 
 const open = ref(false)
